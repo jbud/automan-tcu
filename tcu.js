@@ -1,3 +1,17 @@
+/*************
+* Auto-man transmission
+* By Joe Jackson
+*
+* The idea behind this transmission is to simplify manufacturing, while allowing
+* options for niche enthusiast trim levels. A manufacturer can setup the
+* transmission to be fully automatic and not include a clutch petal with an
+* automatic style shifter, and on another trim level the only differences are
+* programming, a simple sensor petal, and a sensor shifter assembly. then it
+* becomes an enthusiast-grade, manual transmission with shift-by-wire, and
+* clutch-by-wire The manufacturer can even build in feedback as the programming
+* from the TCU can send data back to any given sensor, allowing you to "feel"
+* the clutch or "feel" the gears engage.
+*/
 const clutch = new Clutch();
 
 const ecu = new Ecu();
@@ -57,24 +71,22 @@ function setAuto(toggle){
 async function ashift(from, to) {
     switch(mode){
       case SPORT:
-        await clutch.engageLarp(0.9);
-        if (from > to) { // downshift
+        await clutch.engageLerp(0.9);
+        if (from > to) { // downshift double clutch method
           await gear.shift(-1); // neutral
-          await clutch.disengageLarp(0.9);
-
-          await canbus.sendData('Tpos', (from, to)=>
-              gear.calculateRevMatch(from, to)
-            ).until(Ecudata.CURRENTRPM == gear.calculateRevMatch(from, to));
+          await clutch.disengageLerp(0.9);
+          let rev = gear.calculateRevMatch(from, to);
+          await canbus.throttle(1, rev, 0.9); //Max throttle little lerp
           await clutch.engage();
         }
         await gear.shift(to);
-        await clutch.disengageLarp(0.825);
-
+        await clutch.disengageLerp(0.825);
+        break;
       default:
-        clutch.engageLarp(0.425);
+        clutch.engageLerp(0.425);
         await gear.shift(to);
-        clutch.disengageLarp(0.425);
-
+        clutch.disengageLerp(0.425);
+        break;
     }
 }
 
